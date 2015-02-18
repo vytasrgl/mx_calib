@@ -17,7 +17,7 @@ MotorDiscovery::~MotorDiscovery() {
 }
 
 
-std::vector<std::pair<dynamixel::motorID, uint>> MotorDiscovery::scanForMotors(dynamixel::motorID startID, dynamixel::motorID endID, std::vector<uint> baudrates)
+std::vector<std::pair<dynamixel::motorID, uint32_t>> MotorDiscovery::scanForMotors(dynamixel::motorID startID, dynamixel::motorID endID, std::vector<uint32_t> baudrates)
 {
 	std::vector<std::pair<dynamixel::motorID, uint>> ret;
 

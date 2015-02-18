@@ -72,7 +72,7 @@ namespace dynamixel
 		GOAL_ACCELERATION   = 0x49,
 	};
 
-	inline uint baudIndexToBaudrate(uint8_t baudIdx)
+	inline uint32_t baudIndexToBaudrate(uint8_t baudIdx)
 	{
 		if (baudIdx < 250) {
 			return (2000000 / (baudIdx + 1));

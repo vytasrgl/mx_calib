@@ -21,7 +21,7 @@ public:
 	 /**
 	  * fetch dynamixel motors for a set of baudrates
 	  */
-	std::vector<std::pair<dynamixel::motorID, uint>> scanForMotors(dynamixel::motorID startID, dynamixel::motorID endID, std::vector<uint> baudrates);
+	std::vector<std::pair<dynamixel::motorID, uint32_t>> scanForMotors(dynamixel::motorID startID, dynamixel::motorID endID, std::vector<uint32_t> baudrates);
 
 private:
 	USB2Dynamixel &m_usb2dynamixel;

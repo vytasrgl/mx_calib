@@ -4,6 +4,8 @@
 #include <functional>
 #include <vector>
 
+#include "usb2dynamixel/dynamixel/MotorConfigurations.h"
+#include "usb2dynamixel/dynamixel/USB2Dynamixel.h"
 
 /**
  * @param _allMotorIDs all availble motors
@@ -12,9 +14,7 @@
  * @param _setMotorOffsetFunc function has to overwrite offset of given _motorID
  */
 
-void calibrateOffsets(std::vector<int> _allMotorIDs, std::function<int(int _motorID)> _readMotorValueFunc,
-                                                     std::function<int(int _motorID)> _readMotorOffsetFunc,
-                                                     std::function<void(int _motorID, int _offset)> _setMotorOffsetFunc);
+void calibrateOffsets(MotorConfigurationsManager &configManager, USB2Dynamixel &usb2dynamixel);
 
 
 #endif
