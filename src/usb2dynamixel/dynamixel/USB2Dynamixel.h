@@ -24,6 +24,8 @@ public:
 
 
 	USB2Dynamixel(int baudrate, std::string deviceName, uint maxJobCount);
+	USB2Dynamixel(std::string deviceName, uint maxJobCount);
+
 	virtual ~USB2Dynamixel();
 
 	void setBaudrate(uint newBaudrate);

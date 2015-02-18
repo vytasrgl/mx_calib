@@ -265,6 +265,62 @@ USB2Dynamixel::USB2Dynamixel(int baudrate, std::string deviceName, uint maxJobCo
 	m_pimpl->m_thread = std::thread([&](){m_pimpl->run();});
 }
 
+USB2Dynamixel::USB2Dynamixel(std::string deviceName, uint maxJobCount)
+	: m_pimpl(new USB2Dynamixel_pimpl)
+{
+	m_pimpl->m_maxJobCount = maxJobCount;
+
+	m_pimpl->fd = ::open(deviceName.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+	if (m_pimpl->fd == -1) {
+		std::cerr << "Could not open serial port " << deviceName << std::endl;
+		return;
+	}
+
+	// when reading, return immediately
+	fcntl(m_pimpl->fd, F_SETFL, FNDELAY);
+	struct serial_struct serial;
+	ioctl(m_pimpl->fd, TIOCGSERIAL, &serial);
+
+	serial.flags |= ASYNC_LOW_LATENCY;  /* enable low latency  */
+	ioctl(m_pimpl->fd, TIOCSSERIAL, &serial);
+
+	struct termios2 options;
+	memset(&options, 0, sizeof(options));
+
+	ioctl(m_pimpl->fd, TCGETS2, &options);
+
+	// local line that supports reading
+	options.c_cflag |= (CLOCAL | CREAD);
+
+	// set 8N1
+	options.c_cflag &= ~PARENB;
+	options.c_cflag &= ~CSTOPB;
+	options.c_cflag &= ~CSIZE;
+	options.c_cflag |= CS8;
+
+	// set baudrate
+	options.c_ospeed = 57600; // default
+	options.c_ispeed = 57600; // default
+
+	options.c_cflag  &= ~CBAUD;
+	options.c_cflag  |= BOTHER;
+
+	// disable hardware flow control
+	options.c_cflag &= ~CRTSCTS;
+
+	// use raw mode (see "man cfmakeraw")
+	options.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+	options.c_oflag &= ~OPOST;
+	options.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	options.c_cflag &= ~(CSIZE | PARENB);
+	options.c_cflag |= CS8;
+
+	ioctl(m_pimpl->fd, TCSETS2, &options);
+
+	m_pimpl->m_running = true;
+	m_pimpl->m_thread = std::thread([&](){m_pimpl->run();});
+}
+
 USB2Dynamixel::~USB2Dynamixel() {
 	if (m_pimpl->fd != -1) {
 		m_pimpl->m_running = false;
