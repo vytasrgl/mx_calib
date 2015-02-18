@@ -22,6 +22,7 @@
 namespace
 {
 	commonOptions::Option<std::string> cfgDevice("device", "/dev/ttyUSB0", "serial device to connect to the motors to");
+	commonOptions::Option<std::string> cfgConfigFile("file", "motorConfig.json", "file to work on");
 }
 
 int main() {
@@ -31,7 +32,7 @@ int main() {
 
 
 	std::ifstream inFile;
-	inFile.open("motorConfig.json");
+	inFile.opencfg(*ConfigFile);
 
 	std::stringstream strStream;
 	strStream << inFile.rdbuf();
@@ -80,7 +81,7 @@ int main() {
 	str = jsonWriter.write(rootNode);
 
 	std::ofstream oFile;
-	oFile.open("motorConfig.json");
+	oFile.open(*cfgConfigFile);
 	oFile << str;
 	oFile.close();
 	return 0;
