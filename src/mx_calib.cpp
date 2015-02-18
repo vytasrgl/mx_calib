@@ -42,6 +42,9 @@ int main(int argc, char** argv) {
 	}
 
 	USB2Dynamixel usb2dyn(*cfgDevice, 20);
+	if (usb2dyn.hasError()) {
+		return EXIT_FAILURE;
+	}
 	MotorDiscovery discovery(usb2dyn);
 
 	std::vector<uint32_t> baudrates{dynamixel::baudIndexToBaudrate(1), dynamixel::baudIndexToBaudrate(34)};
