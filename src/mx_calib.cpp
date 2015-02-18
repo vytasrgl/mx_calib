@@ -32,7 +32,7 @@ int main() {
 
 
 	std::ifstream inFile;
-	inFile.opencfg(*ConfigFile);
+	inFile.open(*cfgConfigFile);
 
 	std::stringstream strStream;
 	strStream << inFile.rdbuf();
