@@ -9,6 +9,7 @@
 #define DYNAMIXEL_H_
 
 #include <stdint.h>
+#include <inttypes.h>
 #include <vector>
 
 namespace dynamixel
@@ -70,6 +71,28 @@ namespace dynamixel
 		PUNCH               = 0x30,
 		GOAL_ACCELERATION   = 0x49,
 	};
+
+	inline uint baudIndexToBaudrate(uint8_t baudIdx)
+	{
+		if (baudIdx < 250) {
+			return (2000000 / (baudIdx + 1));
+		} else {
+			switch (baudIdx) {
+				case 250:
+					return 2250000;
+					break;
+				case 251:
+					return 2500000;
+					break;
+				case 252:
+					return 3000000;
+					break;
+				default:
+					break;
+			}
+		}
+		return 57600; // return factory default
+	}
 }
 
 

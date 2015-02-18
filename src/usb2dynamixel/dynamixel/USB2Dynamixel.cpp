@@ -21,7 +21,6 @@
 
 #include <queue>
 #include <thread>
-#include <mutex>
 #include <condition_variable>
 
 
@@ -51,6 +50,8 @@ public:
 
 	dynamixel::length rxLength{0};
 	Second rxTimeout{0 * seconds};
+
+	std::mutex *m_waitMutex{nullptr};
 
 	bool needsResponse{false};
 	USB2Dynamixel::callback callback{nullptr};
@@ -128,13 +129,24 @@ public:
 			{
 				currentTransaction.callback(currentTransaction.motorID, success, error, rxPayload, rxPayloadLen);
 			}
+
+			if (currentTransaction.m_waitMutex)
+			{
+				currentTransaction.m_waitMutex->unlock();
+			}
 		}
 	}
 
-	bool addJob(DynamixelTransaction const& transaction)
+	bool addJob(DynamixelTransaction& transaction, std::mutex* mutex = nullptr)
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
 		if (m_transactions.size() < m_maxJobCount) {
+			transaction.m_waitMutex = mutex;
+			if (transaction.m_waitMutex)
+			{
+				transaction.m_waitMutex->lock();
+			}
+
 			m_transactions.push(transaction);
 			m_cv.notify_one();
 			return true;
@@ -249,20 +261,45 @@ USB2Dynamixel::USB2Dynamixel(int baudrate, std::string deviceName, uint maxJobCo
 
 	ioctl(m_pimpl->fd, TCSETS2, &options);
 
+	m_pimpl->m_running = true;
 	m_pimpl->m_thread = std::thread([&](){m_pimpl->run();});
 }
 
 USB2Dynamixel::~USB2Dynamixel() {
 	if (m_pimpl->fd != -1) {
 		m_pimpl->m_running = false;
+		m_pimpl->m_cv.notify_one();
 		m_pimpl->m_thread.join();
 		::close(m_pimpl->fd);
 	}
 	delete m_pimpl;
 }
 
+void USB2Dynamixel::setBaudrate(uint newBaudrate)
+{
+	if (m_pimpl->m_running) {
+		m_pimpl->m_running = false;
+		m_pimpl->m_cv.notify_one();
+		m_pimpl->m_thread.join();
+	}
+	struct termios2 options;
+	memset(&options, 0, sizeof(options));
+	ioctl(m_pimpl->fd, TCGETS2, &options);
 
-bool USB2Dynamixel::ping(dynamixel::motorID motor, Second timeout, callback cb)
+	options.c_cflag &= ~CBAUD;
+	options.c_cflag |= BOTHER;
+
+	// set baudrate
+	options.c_ospeed = newBaudrate;
+	options.c_ispeed = newBaudrate;
+
+	ioctl(m_pimpl->fd, TCSETS2, &options);
+
+	m_pimpl->m_running = true;
+	m_pimpl->m_thread = std::thread([&](){m_pimpl->run();});
+}
+
+bool USB2Dynamixel::ping(dynamixel::motorID motor, Second timeout, callback cb, std::mutex* mutex)
 {
 	DynamixelTransaction transaction;
 	transaction.callback = cb;
@@ -279,10 +316,10 @@ bool USB2Dynamixel::ping(dynamixel::motorID motor, Second timeout, callback cb)
 	transaction.writeBuffer.push_back(uint8_t(dynamixel::Instruction::PING));
 	transaction.writeBuffer.push_back(calculateChecksum(transaction.writeBuffer));
 
-	return m_pimpl->addJob(transaction);
+	return m_pimpl->addJob(transaction, mutex);
 }
 
-bool USB2Dynamixel::read(dynamixel::motorID motor, dynamixel::Register baseRegister, uint8_t length, Second timeout, callback cb)
+bool USB2Dynamixel::read(dynamixel::motorID motor, dynamixel::Register baseRegister, uint8_t length, Second timeout, callback cb, std::mutex* mutex)
 {
 	DynamixelTransaction transaction;
 	transaction.callback = cb;
@@ -301,10 +338,10 @@ bool USB2Dynamixel::read(dynamixel::motorID motor, dynamixel::Register baseRegis
 	transaction.writeBuffer.push_back(length);
 	transaction.writeBuffer.push_back(calculateChecksum(transaction.writeBuffer));
 
-	return m_pimpl->addJob(transaction);
+	return m_pimpl->addJob(transaction, mutex);
 }
 
-bool USB2Dynamixel::write(dynamixel::motorID motor, dynamixel::Register baseRegister, dynamixel::parameter const& writeBuffer)
+bool USB2Dynamixel::write(dynamixel::motorID motor, dynamixel::Register baseRegister, dynamixel::parameter const& writeBuffer, std::mutex* mutex)
 {
 	if (writeBuffer.size() > 0) {
 		DynamixelTransaction transaction;
@@ -324,12 +361,12 @@ bool USB2Dynamixel::write(dynamixel::motorID motor, dynamixel::Register baseRegi
 
 		transaction.writeBuffer.push_back(calculateChecksum(transaction.writeBuffer));
 
-		return m_pimpl->addJob(transaction);
+		return m_pimpl->addJob(transaction, mutex);
 	}
 	return false;
 }
 
-bool USB2Dynamixel::reset(dynamixel::motorID motor)
+bool USB2Dynamixel::reset(dynamixel::motorID motor, std::mutex* mutex)
 {
 	DynamixelTransaction transaction;
 	transaction.motorID = motor;
@@ -342,10 +379,10 @@ bool USB2Dynamixel::reset(dynamixel::motorID motor)
 	transaction.writeBuffer.push_back(uint8_t(dynamixel::Instruction::RESET));
 	transaction.writeBuffer.push_back(calculateChecksum(transaction.writeBuffer));
 
-	return m_pimpl->addJob(transaction);
+	return m_pimpl->addJob(transaction, mutex);
 }
 
-bool USB2Dynamixel::sync_write(std::map<dynamixel::motorID, dynamixel::parameter> const& motorParams, dynamixel::Register baseRegister)
+bool USB2Dynamixel::sync_write(std::map<dynamixel::motorID, dynamixel::parameter> const& motorParams, dynamixel::Register baseRegister, std::mutex* mutex)
 {
 	if (motorParams.size() > 0)
 	{
@@ -381,7 +418,7 @@ bool USB2Dynamixel::sync_write(std::map<dynamixel::motorID, dynamixel::parameter
 
 			transaction.writeBuffer.push_back(calculateChecksum(transaction.writeBuffer));
 
-			return m_pimpl->addJob(transaction);
+			return m_pimpl->addJob(transaction, mutex);
 		}
 	}
 	return false;

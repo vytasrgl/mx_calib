@@ -13,6 +13,7 @@
 
 #include "dynamixel/dynamixel.h"
 #include "utils/utils.h"
+#include <mutex>
 
 class USB2Dynamixel_pimpl;
 
@@ -25,18 +26,20 @@ public:
 	USB2Dynamixel(int baudrate, std::string deviceName, uint maxJobCount);
 	virtual ~USB2Dynamixel();
 
-	bool ping(dynamixel::motorID motor, Second timeout, callback cb);
+	void setBaudrate(uint newBaudrate);
 
-	bool read(dynamixel::motorID motor, dynamixel::Register baseRegister, uint8_t length, Second timeout, callback cb);
+	bool ping(dynamixel::motorID motor, Second timeout, callback cb, std::mutex* mutex = nullptr);
 
-	bool write(dynamixel::motorID motor, dynamixel::Register baseRegister, dynamixel::parameter const& writeBuffer);
+	bool read(dynamixel::motorID motor, dynamixel::Register baseRegister, uint8_t length, Second timeout, callback cb, std::mutex* mutex = nullptr);
+
+	bool write(dynamixel::motorID motor, dynamixel::Register baseRegister, dynamixel::parameter const& writeBuffer, std::mutex* mutex = nullptr);
 
 	// write reg is not implemented since it's not necessary see sync_write
 	// action is not implemented (see above)
 
-	bool reset(dynamixel::motorID motor);
+	bool reset(dynamixel::motorID motor, std::mutex* mutex = nullptr);
 
-	bool sync_write(std::map<dynamixel::motorID, dynamixel::parameter> const& motorParams, dynamixel::Register baseRegister);
+	bool sync_write(std::map<dynamixel::motorID, dynamixel::parameter> const& motorParams, dynamixel::Register baseRegister, std::mutex* mutex = nullptr);
 
 private:
 	USB2Dynamixel_pimpl *m_pimpl;
