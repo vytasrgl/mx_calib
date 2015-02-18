@@ -1,6 +1,9 @@
 #include "utils.h"
 
 #include <cstdio>
+#include <sys/select.h>
+#include <fcntl.h>
+#include <termios.h>
 
 namespace utils {
 
@@ -36,6 +39,42 @@ namespace utils {
 	void delay(Second s) {
 		std::chrono::milliseconds duration(int(s.value() * 1000.));
 		std::this_thread::sleep_for(duration);
+	}
+
+	bool kbhit()
+	{
+		struct timeval tv;
+		fd_set fds;
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+		FD_ZERO(&fds);
+		FD_SET(STDIN_FILENO, &fds); //STDIN_FILENO is 0
+		select(STDIN_FILENO+1, &fds, NULL, NULL, &tv);
+		return bool(FD_ISSET(STDIN_FILENO, &fds));
+	}
+
+	void nonblock(bool _nonblocking)
+	{
+		struct termios ttystate;
+
+		//get the terminal state
+		tcgetattr(STDIN_FILENO, &ttystate);
+
+		if (_nonblocking)
+		{
+			//turn off canonical mode
+			ttystate.c_lflag &= ~ICANON;
+			//minimum of number input read.
+			ttystate.c_cc[VMIN] = 1;
+		}
+		else if (_nonblocking)
+		{
+			//turn on canonical mode
+			ttystate.c_lflag |= ICANON;
+		}
+		//set the terminal attributes.
+		tcsetattr(STDIN_FILENO, TCSANOW, &ttystate);
+
 	}
 
 }
