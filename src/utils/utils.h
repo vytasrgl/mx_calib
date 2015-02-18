@@ -36,6 +36,10 @@ namespace utils {
 	Second getCurrentTime();
 
 	void delay(Second s);
+	bool kbhit();
+	void nonblock(bool _nonblocking);
+
+
 }
 
 #define UNUSED(stuff) (void)(stuff);
