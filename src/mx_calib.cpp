@@ -17,10 +17,16 @@
 #include "usb2dynamixel/dynamixel/USB2Dynamixel.h"
 
 #include "json/json.h"
+#include "commonOptions/commonOptions.h"
+
+namespace
+{
+	commonOptions::Option<std::string> cfgDevice("device", "/dev/ttyUSB0", "serial device to connect to the motors to");
+}
 
 int main() {
 
-	USB2Dynamixel usb2dyn(1000000, "/dev/ttyUSB0", 20);
+	USB2Dynamixel usb2dyn("/dev/ttyUSB0", 20);
 	MotorDiscovery discovery(usb2dyn);
 
 
