@@ -218,6 +218,7 @@ USB2Dynamixel::USB2Dynamixel(int baudrate, std::string deviceName, uint maxJobCo
 	m_pimpl->fd = ::open(deviceName.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
 	if (m_pimpl->fd == -1) {
 		std::cerr << "Could not open serial port " << deviceName << std::endl;
+		error = true;
 		return;
 	}
 
@@ -273,6 +274,7 @@ USB2Dynamixel::USB2Dynamixel(std::string deviceName, uint maxJobCount)
 	m_pimpl->fd = ::open(deviceName.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
 	if (m_pimpl->fd == -1) {
 		std::cerr << "Could not open serial port " << deviceName << std::endl;
+		error = true;
 		return;
 	}
 

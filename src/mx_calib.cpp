@@ -26,19 +26,25 @@ namespace
 {
 	commonOptions::Option<std::string> cfgDevice("device", "/dev/ttyUSB0", "serial device to connect to the motors to");
 	commonOptions::Option<std::string> cfgConfigFile("file", "motorConfig.json", "file to work on");
-}
 
-namespace {
 	commonOptions::Switch swtHelp("help", "show help", []() {
 		commonOptions::print();
-		exit(0);
+		exit(EXIT_SUCCESS);
 	});
 }
 
 int main(int argc, char** argv) {
-	commonOptions::parse(argc, argv);
+	if (not commonOptions::parse(argc, argv)) {
+		std::cerr << "Invalid paramer" << std::endl;
+		commonOptions::print();
+		exit(EXIT_FAILURE);
+
+	}
 
 	USB2Dynamixel usb2dyn(*cfgDevice, 20);
+	if (usb2dyn.hasError()) {
+		return EXIT_FAILURE;
+	}
 	MotorDiscovery discovery(usb2dyn);
 
 	std::vector<uint32_t> baudrates{dynamixel::baudIndexToBaudrate(1), dynamixel::baudIndexToBaudrate(34)};
@@ -54,5 +60,5 @@ int main(int argc, char** argv) {
 
 	calibrateOffsets(configManager, usb2dyn);
 
-	return 0;
+	return EXIT_SUCCESS;
 }
