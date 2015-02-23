@@ -53,6 +53,10 @@ MotorConfigurationsManager::MotorConfigurationsManager(std::string filename)
 			config.name = motorNode["name"].asString();
 		}
 
+		if (not motorNode["bus"].empty() && motorNode["bus"].isString()) {
+			config.bus = motorNode["bus"].asString();
+		}
+
 		motorConfigs[id] = config;
 	}
 }
@@ -86,6 +90,7 @@ void MotorConfigurationsManager::save()
 		motor["baudrate"] = config.second.baudrate;
 		motor["offset"] = config.second.offset;
 		motor["name"] = config.second.name;
+		motor["bus"] = config.second.bus;
 		motorArray.append(motor);
 	}
 

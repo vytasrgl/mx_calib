@@ -17,6 +17,7 @@ struct MotorConfiguration
 	uint baudrate{0};
 	int offset{0};
 	std::string name{""};
+	std::string bus{""};
 };
 
 class MotorConfigurationsManager {
