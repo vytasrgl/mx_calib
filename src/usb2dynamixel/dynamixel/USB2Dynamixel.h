@@ -11,7 +11,7 @@
 #include <string>
 #include <map>
 
-#include "dynamixel/dynamixel.h"
+#include "dynamixel.h"
 #include "utils/utils.h"
 #include <mutex>
 
@@ -22,8 +22,9 @@ public:
 
 	typedef std::function<void(dynamixel::motorID motor, bool success, uint8_t error, const uint8_t* receiveBuffer, uint8_t rxPayloadLen)> callback;
 
-	USB2Dynamixel(int baudrate, std::string deviceName, uint maxJobCount);
-	USB2Dynamixel(std::string deviceName, uint maxJobCount);
+
+	USB2Dynamixel(int baudrate, std::vector<std::string> deviceNames, uint maxJobCount);
+	USB2Dynamixel(std::vector<std::string> deviceNames, uint maxJobCount);
 
 	virtual ~USB2Dynamixel();
 
@@ -42,14 +43,10 @@ public:
 
 	bool sync_write(std::map<dynamixel::motorID, dynamixel::parameter> const& motorParams, dynamixel::Register baseRegister, std::mutex* mutex = nullptr);
 
-	bool hasError() const { return error; }
-
 private:
 	USB2Dynamixel_pimpl *m_pimpl;
 
 	uint8_t calculateChecksum(dynamixel::parameter const& packet) const;
-
-	bool error { false };
 };
 
 #endif /* SRC_TRANSPORT_USB2DYNAMIXEL_H_ */

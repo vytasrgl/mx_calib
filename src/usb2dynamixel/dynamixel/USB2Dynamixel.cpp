@@ -210,17 +210,25 @@ public:
 
 
 
-USB2Dynamixel::USB2Dynamixel(int baudrate, std::string deviceName, uint maxJobCount)
+USB2Dynamixel::USB2Dynamixel(int baudrate, std::vector<std::string> deviceNames, uint maxJobCount)
 	: m_pimpl(new USB2Dynamixel_pimpl)
 {
 	m_pimpl->m_maxJobCount = maxJobCount;
 
-	m_pimpl->fd = ::open(deviceName.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+	for (auto const& device : deviceNames) {
+		m_pimpl->fd = ::open(device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+		if (m_pimpl->fd != -1) break;
+	}
+
 	if (m_pimpl->fd == -1) {
-		std::cerr << "Could not open serial port " << deviceName << std::endl;
-		error = true;
+		std::cerr << "Could not open any serial port: ";
+		for (auto const& device : deviceNames) {
+			std::cerr<<device<<" ";
+		}
+		std::cerr<<std::endl;
 		return;
 	}
+
 
 	// when reading, return immediately
 	fcntl(m_pimpl->fd, F_SETFL, FNDELAY);
@@ -266,15 +274,25 @@ USB2Dynamixel::USB2Dynamixel(int baudrate, std::string deviceName, uint maxJobCo
 	m_pimpl->m_thread = std::thread([&](){m_pimpl->run();});
 }
 
-USB2Dynamixel::USB2Dynamixel(std::string deviceName, uint maxJobCount)
+USB2Dynamixel::USB2Dynamixel(std::vector<std::string> deviceNames, uint maxJobCount)
 	: m_pimpl(new USB2Dynamixel_pimpl)
 {
 	m_pimpl->m_maxJobCount = maxJobCount;
 
-	m_pimpl->fd = ::open(deviceName.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+	for (auto const& device : deviceNames) {
+		m_pimpl->fd = ::open(device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+		if (m_pimpl->fd != -1) {
+			std::cout << "usb2dynamixel opened on " << device << std::endl;
+			break;
+		}
+	}
+
 	if (m_pimpl->fd == -1) {
-		std::cerr << "Could not open serial port " << deviceName << std::endl;
-		error = true;
+		std::cerr << "Could not open any serial port: ";
+		for (auto const& device : deviceNames) {
+			std::cerr<<device<<" ";
+		}
+		std::cerr<<std::endl;
 		return;
 	}
 
