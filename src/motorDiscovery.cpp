@@ -25,6 +25,11 @@ std::vector<std::pair<dynamixel::motorID, uint32_t>> MotorDiscovery::scanForMoto
 	{
 		std::cout << "testing baudrate " << baudrate << std::endl;
 		m_usb2dynamixel.setBaudrate(baudrate);
+		{
+			std::mutex mutex;
+			m_usb2dynamixel.write(dynamixel::broadcastID, dynamixel::Register::STATUS_RETURN_LEVEL, {1}, &mutex);
+			mutex.lock();
+		}
 
 		for (dynamixel::motorID motor(startID); motor < endID; ++motor)
 		{
