@@ -10,7 +10,7 @@
 #include <fstream>
 #include <assert.h>
 
-#include "json/json.h"
+#include <json/json.h>
 
 MotorConfigurationsManager::MotorConfigurationsManager(std::string filename)
 	: m_filename(filename)
@@ -55,6 +55,9 @@ MotorConfigurationsManager::MotorConfigurationsManager(std::string filename)
 
 		if (not motorNode["bus"].empty() && motorNode["bus"].isString()) {
 			config.bus = motorNode["bus"].asString();
+		}
+		if (config.bus == "") {
+			config.bus = "dynamixel"; // default to dynamixel here
 		}
 
 		motorConfigs[id] = config;
