@@ -120,6 +120,12 @@ public:
 						if (success) {
 							rxPayload = i_packet.data() + 5;
 							rxPayloadLen = i_packet.size() - 6;
+						} else {
+//							std::cout << "received malformed packet" << std::endl;
+//							for (auto byte : currentTransaction.readBuffer) {
+//								printf("0x%X ", byte);
+//							}
+//							printf("\n");
 						}
 					}
 				}
@@ -184,11 +190,28 @@ public:
 		size_t bytesRead = 0;
 
 		do {
+			do { // read the header
+				ssize_t r = ::read(fd, data + bytesRead, 1);
+				if (r > 0 && 0xff == data[bytesRead]) {
+					bytesRead += r;
+				}
+			} while (bytesRead < 2 && (0 * seconds == timeout || utils::getCurrentTime() - startTime < timeout));
+			do { // check if the following byte is a "non-header"
+				ssize_t r = ::read(fd, data + bytesRead, 1);
+				if (r > 0) {
+					if (0xff != data[bytesRead]) {
+						bytesRead += r;
+					} else {
+						bytesRead = 1;
+						break;
+					}
+				}
+			} while (bytesRead < 3 && (0 * seconds == timeout || utils::getCurrentTime() - startTime < timeout));
+		} while (bytesRead < 3 && (0 * seconds == timeout || utils::getCurrentTime() - startTime < timeout));
+
+		do {
 			ssize_t r = ::read(fd, data + bytesRead, incommingLength - bytesRead);
-			if (r < 0) {
-				continue;
-//				return false;
-			} else {
+			if (r > 0) {
 				bytesRead += r;
 			}
 		} while (bytesRead < incommingLength && (0 * seconds == timeout || utils::getCurrentTime() - startTime < timeout));
@@ -281,10 +304,7 @@ USB2Dynamixel::USB2Dynamixel(std::vector<std::string> deviceNames, uint maxJobCo
 
 	for (auto const& device : deviceNames) {
 		m_pimpl->fd = ::open(device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
-		if (m_pimpl->fd != -1) {
-			std::cout << "usb2dynamixel opened on " << device << std::endl;
-			break;
-		}
+		if (m_pimpl->fd != -1) break;
 	}
 
 	if (m_pimpl->fd == -1) {
