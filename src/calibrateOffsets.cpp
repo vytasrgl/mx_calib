@@ -32,11 +32,32 @@ static uint16_t readPosition(dynamixel::motorID motor, USB2Dynamixel &usb2Dynami
 	return position;
 }
 
+static void setPosition(dynamixel::motorID motor, uint16_t targetPos, USB2Dynamixel &usb2Dynamixel) {
+	uint8_t targetPosLow = (targetPos >> 0) & 0xff;
+	uint8_t targetPosHigh = (targetPos >> 8) & 0xff;
+	usb2Dynamixel.write(motor, dynamixel::Register::GOAL_POSITION, {targetPosLow, targetPosHigh});
+}
+
 static void disableStiffness(dynamixel::motorID motor, USB2Dynamixel &usb2Dynamixel)
 {
 	std::mutex mutex;
 	usb2Dynamixel.write(motor, dynamixel::Register::TORQUE_ENABLE, {0}, &mutex);
 	mutex.lock();
+}
+
+static void enableStiffness(dynamixel::motorID motor, USB2Dynamixel &usb2Dynamixel)
+{
+	std::mutex mutex;
+	usb2Dynamixel.write(motor, dynamixel::Register::TORQUE_ENABLE, {1}, &mutex);
+	mutex.lock();
+}
+
+static void setDefaultRange(dynamixel::motorID motor, USB2Dynamixel &usb2Dynamixel)
+{
+	uint16_t high = (1 << 12) - 1;
+	uint16_t low = 0;
+	dynamixel::parameter params = {(uint8_t)((low >> 0) & 0xff), (uint8_t)((low >> 8) & 0xff), (uint8_t)((high >> 0) & 0xff), (uint8_t)((high >> 8) & 0xff)};
+	usb2Dynamixel.write(motor, dynamixel::Register::CW_ANGLE_LIMIT, params);
 }
 
 
@@ -62,6 +83,7 @@ void calibrateOffsets(MotorConfigurationsManager &configManager, USB2Dynamixel &
 	enum class State { DisplayChooseID, ChooseID, DisplayCalibrating, Calibrating };
 	State state { State::DisplayChooseID };
 	int selectedID {0};
+	bool stressMode(false);
 
 	while(true) {
 		switch (state) {
@@ -95,9 +117,12 @@ void calibrateOffsets(MotorConfigurationsManager &configManager, USB2Dynamixel &
 		case State::DisplayCalibrating: {
 			std::cout << std::endl;
 			std::cout << "-----------------------------------------" << std::endl;
-			std::cout << "Press Space or Enter to accept or ESC to reject" << std::endl;
+			std::cout << "Press Space or Enter to accept or ESC to reject or s to toggle stress mode" << std::endl;
 			std::cout << "Calbrating motor: " << selectedID << std::endl;
 			state = State::Calibrating;
+			stressMode = false;
+			setDefaultRange(selectedID, usb2dynamixel);
+			while (10 != std::cin.get());
 			break;
 		}
 		case State::Calibrating: {
@@ -114,6 +139,27 @@ void calibrateOffsets(MotorConfigurationsManager &configManager, USB2Dynamixel &
 			std::cout << "New Offset: " << std::setw(5) << newOffset << "; ";
 
 			std::cout << "\r" << std::flush;
+
+			if (stressMode) {
+				static uint16_t targetPos = 0;
+				static bool upDown(false);
+
+				if (not upDown) {
+					targetPos = 0;
+
+					if (rawPosition <= 10) {
+						upDown = true;
+					}
+				} else {
+					targetPos = (1 << 12) - 1;
+
+					if (rawPosition >= ((1 << 12) - 1) - 10) {
+						upDown = false;
+					}
+				}
+				setPosition(selectedID, targetPos, usb2dynamixel);
+			}
+
 			if (utils::kbhit()) {
 				auto c = std::cin.get();
 				if (c == 13) {
@@ -124,6 +170,13 @@ void calibrateOffsets(MotorConfigurationsManager &configManager, USB2Dynamixel &
 					configManager[selectedID].offset = newOffset;
 					configManager.save();
 					state = State::DisplayChooseID;
+				} else if (c == 's') {
+					stressMode = !stressMode;
+					if (stressMode) {
+						enableStiffness(selectedID, usb2dynamixel);
+					} else {
+						disableStiffness(selectedID, usb2dynamixel);
+					}
 				}
 			}
 			break;
