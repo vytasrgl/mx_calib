@@ -261,7 +261,6 @@ inline bool parse(int argc, char const* const* argv) {
 		std::string arg = argv[i];
 		if (0 == arg.compare(0, 2, "--")) {
 			arg = arg.substr(2); // cut of first two symbols
-			std::transform(arg.begin(), arg.end(), arg.begin(), ::tolower);
 
 			size_t equalSignPos = arg.find("=");
 			if (equalSignPos != std::string::npos) {

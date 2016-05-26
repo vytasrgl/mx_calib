@@ -24,7 +24,7 @@
 
 namespace
 {
-	commonOptions::Option<std::vector<std::string>> cnfDevice("usb2dyn.device", {"/dev/ttyUSB0", "/dev/ttyUSB1", "/dev/ttyUSB2"}, "device for usb2BaccaratDealer");
+	commonOptions::Option<std::string> cnfDeviceName("device", "/dev/ttyUSB0", "Device name");
 	commonOptions::Option<std::string> cfgConfigFile("file", "motorConfig.json", "file to work on");
 
 	commonOptions::Option<int> cfgSetupMotorID("id", -1, "setup motor to 1000000 baud and id (parameter)");
@@ -96,32 +96,22 @@ int main(int argc, char** argv) {
 		exit(EXIT_FAILURE);
 
 	}
-
-	USB2Dynamixel usb2dyn(*cnfDevice, 50);
+	std::vector<std::string> deviceNames;
+	deviceNames.push_back(*cnfDeviceName);
+	USB2Dynamixel usb2dyn(deviceNames, 50);
 
 	MotorDiscovery discovery(usb2dyn);
 
 	runSimpleTasks(usb2dyn);
+ 
 
-
-	std::vector<uint32_t> baudrates{dynamixel::baudIndexToBaudrate(1), dynamixel::baudIndexToBaudrate(34)};
+	std::vector<uint32_t> baudrates{dynamixel::baudIndexToBaudrate(1)};
 	if (*swtScanAll) {
 		baudrates.clear();
 		for (uint8_t baud(1); baud < 40; ++baud) {
 			baudrates.push_back(dynamixel::baudIndexToBaudrate(baud));
 		}
 	}
-	std::vector<std::pair<dynamixel::motorID, uint32_t>> motors = discovery.scanForMotors(0, 253, baudrates);
-
-	MotorConfigurationsManager configManager(*cfgConfigFile);
-
-	for (auto const& motor : motors)
-	{
-		configManager[motor.first].baudrate = motor.second;
-	}
-
-
-	calibrateOffsets(configManager, usb2dyn);
-
+	std::vector<std::pair<dynamixel::motorID, uint32_t>> motors = discovery.scanForMotors(0, 50, baudrates);
 	return EXIT_SUCCESS;
 }
